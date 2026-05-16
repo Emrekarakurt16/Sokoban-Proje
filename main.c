@@ -7,29 +7,30 @@
 #define MAP_ROWS 10
 #define MAP_COLS 10
 
-// Her iki kutunun da rahatça hareket edebileceği genişletilmiş harita şablonu
+// Orijinal harita şablonu
 int initialMap[MAP_ROWS][MAP_COLS] = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 4, 0, 1}, // Sağ üstteki hedef (Değişmedi)
-    {1, 1, 1, 0, 0, 0, 0, 1, 0, 1}, // Ortadaki sıkışıklığa sebep olan duvarlar temizlendi
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 4, 0, 0, 0, 0, 0, 0, 1}, // Sol alttaki hedef (Değişmedi)
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-};
-
-int map[MAP_ROWS][MAP_COLS] = {
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 2, 0, 0, 0, 3, 0, 0, 1}, // Oyuncu (2,2) ve Üstteki Kutu (2,6)
     {1, 0, 0, 0, 0, 0, 0, 4, 0, 1},
     {1, 1, 1, 0, 0, 0, 0, 1, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 4, 0, 0, 0, 3, 0, 0, 1}, // Alttaki Kutu (7,6) - Önü arkası tamamen açık
+    {1, 0, 4, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+};
+
+// Anlık oyun haritası
+int map[MAP_ROWS][MAP_COLS] = {
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 2, 0, 0, 0, 3, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 4, 0, 1},
+    {1, 1, 1, 0, 0, 0, 0, 1, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 4, 0, 0, 0, 3, 0, 0, 1},
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 };
@@ -38,7 +39,24 @@ int playerRow = 2;
 int playerCol = 2;
 int hasWon = 0;
 
-// Kazanma durumunu kontrol eden fonksiyon
+// Resim Dokuları için değişkenler
+SDL_Texture* playerTex = NULL;
+SDL_Texture* boxTex = NULL;
+SDL_Texture* wallTex = NULL;
+SDL_Texture* targetTex = NULL;
+
+// BMP resimlerini yükleyen yardımcı fonksiyon
+SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
+    SDL_Surface* loadedSurface = SDL_LoadBMP(path);
+    if (loadedSurface == NULL) {
+        printf("Resim yuklenemedi: %s! SDL Hatasi: %s\n", path, SDL_GetError());
+        return NULL;
+    }
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
+    SDL_FreeSurface(loadedSurface);
+    return texture;
+}
+
 int checkWin() {
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
@@ -50,21 +68,18 @@ int checkWin() {
     return 1;
 }
 
-// Oyuncuyu ve kutuları hareket ettiren ana fonksiyon
 void movePlayer(int dRow, int dCol) {
     if (hasWon) return;
 
     int nextRow = playerRow + dRow;
     int nextCol = playerCol + dCol;
 
-    // Boş yol veya hedefe ilerleme
     if (map[nextRow][nextCol] == 0 || map[nextRow][nextCol] == 4) {
         map[playerRow][playerCol] = (initialMap[playerRow][playerCol] == 4) ? 4 : 0;
         map[nextRow][nextCol] = 2;
         playerRow = nextRow;
         playerCol = nextCol;
     }
-    // Kutu itme mantığı
     else if (map[nextRow][nextCol] == 3) {
         int boxNextRow = nextRow + dRow;
         int boxNextCol = nextCol + dCol;
@@ -84,17 +99,15 @@ void movePlayer(int dRow, int dCol) {
     }
 }
 
-// Bölümü sıfırlama (Reset) fonksiyonu
 void resetLevel() {
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
             map[r][c] = initialMap[r][c];
         }
     }
-    // Başlangıç konumlarını elle yerleştiriyoruz
-    map[2][2] = 2; // Oyuncu
-    map[2][6] = 3; // 1. Kutu
-    map[7][6] = 3; // 2. Kutu
+    map[2][2] = 2;
+    map[2][6] = 3;
+    map[7][6] = 3;
     playerRow = 2;
     playerCol = 2;
     hasWon = 0;
@@ -130,6 +143,12 @@ int main(int argc, char* args[]) {
         return 1;
     }
 
+    // --- RESIMLERI TAM DOSYA YOLUYLA YÜKLE ---
+    playerTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\player.bmp", renderer);
+    boxTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\box.bmp", renderer);
+    wallTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\wall.bmp", renderer);
+    targetTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\target.bmp", renderer);
+
     int isRunning = 1;
     SDL_Event event;
 
@@ -140,25 +159,19 @@ int main(int argc, char* args[]) {
             }
             else if (event.type == SDL_KEYDOWN) {
                 switch (event.key.keysym.sym) {
-                    // Hareket Tuşları
                     case SDLK_UP:    case SDLK_w: movePlayer(-1, 0); break;
                     case SDLK_DOWN:  case SDLK_s: movePlayer(1, 0);  break;
                     case SDLK_LEFT:  case SDLK_a: movePlayer(0, -1); break;
                     case SDLK_RIGHT: case SDLK_d: movePlayer(0, 1);  break;
-
-                    // Reset Tuşu
-                    case SDLK_r:
-                        resetLevel();
-                        break;
+                    case SDLK_r: resetLevel(); break;
                 }
             }
         }
 
-        // Ekran Arka Plan Rengi
         if (hasWon) {
-            SDL_SetRenderDrawColor(renderer, 20, 100, 20, 255); // Kazanma Rengi (Koyu Yeşil)
+            SDL_SetRenderDrawColor(renderer, 20, 100, 20, 255);
         } else {
-            SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);  // Normal Renk (Koyu Gri)
+            SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         }
         SDL_RenderClear(renderer);
 
@@ -167,34 +180,37 @@ int main(int argc, char* args[]) {
             for (int c = 0; c < MAP_COLS; c++) {
                 SDL_Rect tile = { c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE };
 
-                // Hedef noktalarını arka planda hep çiz
-                if (initialMap[r][c] == 4) {
-                    SDL_SetRenderDrawColor(renderer, 0, 255, 100, 255);
-                    SDL_Rect targetRect = { c * TILE_SIZE + 15, r * TILE_SIZE + 15, 10, 10 };
-                    SDL_RenderFillRect(renderer, &targetRect);
+                // 1. Hedef Çizimi (Arka Plan)
+                if (initialMap[r][c] == 4 && targetTex != NULL) {
+                    SDL_RenderCopy(renderer, targetTex, NULL, &tile);
                 }
 
-                if (map[r][c] == 1) { // Duvar -> Beyaz/Gri
-                    SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
-                    SDL_RenderFillRect(renderer, &tile);
+                // 2. Nesne Çizimi (Ön Plan)
+                if (map[r][c] == 1 && wallTex != NULL) {
+                    SDL_RenderCopy(renderer, wallTex, NULL, &tile);
                 }
-                else if (map[r][c] == 2) { // Oyuncu -> Mavi
-                    SDL_SetRenderDrawColor(renderer, 0, 100, 255, 255);
-                    SDL_RenderFillRect(renderer, &tile);
+                else if (map[r][c] == 2 && playerTex != NULL) {
+                    SDL_RenderCopy(renderer, playerTex, NULL, &tile);
                 }
-                else if (map[r][c] == 3) { // Kutu
+                else if (map[r][c] == 3 && boxTex != NULL) {
                     if (initialMap[r][c] == 4) {
-                        SDL_SetRenderDrawColor(renderer, 50, 200, 50, 255); // Hedefteki Kutu -> Parlak Yeşil
+                        SDL_SetTextureColorMod(boxTex, 150, 255, 150); // Hedefteki kutuyu yeşillendir
                     } else {
-                        SDL_SetRenderDrawColor(renderer, 200, 150, 50, 255); // Normal Kutu -> Kahverengi
+                        SDL_SetTextureColorMod(boxTex, 255, 255, 255);
                     }
-                    SDL_RenderFillRect(renderer, &tile);
+                    SDL_RenderCopy(renderer, boxTex, NULL, &tile);
                 }
             }
         }
 
         SDL_RenderPresent(renderer);
     }
+
+    // Temizlik
+    SDL_DestroyTexture(playerTex);
+    SDL_DestroyTexture(boxTex);
+    SDL_DestroyTexture(wallTex);
+    SDL_DestroyTexture(targetTex);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
