@@ -10,7 +10,7 @@
 
 // Orijinal Bölüm Şablonları Havuzu (3 Boyutlu Dizi)
 int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
-    // --- BÖLÜM 1 (Dünkü Tanıdık Harita) ---
+    // --- BÖLÜM 1 ---
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -23,7 +23,7 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     },
-    // --- BÖLÜM 2 (Bir tık daha dar ve dolambaçlı) ---
+    // --- BÖLÜM 2 (Senin düzenlediğin hali) ---
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 0, 0, 0, 1, 0, 0, 0, 4, 1},
@@ -36,17 +36,18 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     },
-    // --- BÖLÜM 3 (Final Bölümü - 3 Kutulu ve daha büyük koridorlar) ---
+    // --- BÖLÜM 3 (Yeni Zorlu Final Bölümü - 4 Kutulu) ---
+    // --- BÖLÜM 3 (Zor ama %100 Çözülebilir Final Haritası) ---
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-        {1, 0, 4, 0, 0, 0, 0, 4, 0, 1},
-        {1, 0, 0, 0, 1, 1, 0, 0, 0, 1},
-        {1, 0, 0, 0, 1, 1, 0, 0, 0, 1},
+        {1, 4, 0, 0, 0, 0, 0, 0, 4, 1}, // Üst köşelerde hedefler
+        {1, 0, 1, 0, 0, 0, 1, 0, 0, 1}, // İç duvarlar hafif açıldı
+        {1, 0, 1, 1, 1, 0, 1, 0 , 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // Ortada geniş manevra alanı
+        {1, 1, 0, 1, 1, 1, 1, 0, 0, 1},
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-        {1, 0, 1, 1, 0, 0, 1, 1, 0, 1},
-        {1, 0, 1, 1, 0, 0, 1, 1, 0, 1},
-        {1, 0, 0, 0, 0, 4, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 1, 1, 0, 1, 0, 1},
+        {1, 4, 1, 0, 0, 0, 0, 0, 4, 1}, // Alt köşelerde hedefler
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     }
 };
@@ -55,10 +56,10 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
 int map[MAP_ROWS][MAP_COLS];
 int initialMap[MAP_ROWS][MAP_COLS];
 
-int currentLevel = 0; // 0: 1.Bölüm, 1: 2.Bölüm, 2: 3.Bölüm
+int currentLevel = 0;
 int playerRow;
 int playerCol;
-int hasWon = 0; // Tüm oyunun bitip bitmediğini kontrol eder
+int hasWon = 0;
 
 SDL_Texture* playerTex = NULL;
 SDL_Texture* boxTex = NULL;
@@ -92,22 +93,25 @@ void loadLevel(int levelNum) {
         }
     }
 
-    // Her bölümün başlangıç elemanlarını (Oyuncu ve Kutuları) elle yerleştiriyoruz
+    // Her bölümün başlangıç elemanlarını (Oyuncu ve Kutuları) yerleştiriyoruz
     if (levelNum == 0) {
-        map[2][2] = 2; playerRow = 2; playerCol = 2; // Oyuncu
-        map[2][6] = 3; // 1. Kutu
-        map[7][6] = 3; // 2. Kutu
+        map[2][2] = 2; playerRow = 2; playerCol = 2;
+        map[2][6] = 3;
+        map[7][6] = 3;
     }
     else if (levelNum == 1) {
-        map[1][2] = 2; playerRow = 1; playerCol = 2; // Oyuncu
-        map[2][3] = 3; // 1. Kutu
-        map[5][5] = 3; // 2. Kutu
+        map[1][2] = 2; playerRow = 1; playerCol = 2;
+        map[2][3] = 3;
+        map[5][5] = 3;
     }
     else if (levelNum == 2) {
-        map[4][4] = 2; playerRow = 4; playerCol = 4; // Oyuncu
-        map[2][2] = 3; // 1. Kutu
-        map[2][7] = 3; // 2. Kutu
-        map[7][3] = 3; // 3. Kutu (Bu bölümde 3 hedef ve 3 kutu var!)
+        map[4][2] = 2; playerRow = 4; playerCol = 2; // Oyuncu başlangıç yeri
+
+        // 4 Adet Kutunun Başlangıç Konumları
+        map[3][3] = 3; // 1. Kutu
+        map[4][6] = 3; // 2. Kutu
+        map[6][4] = 3; // 3. Kutu
+        map[7][7] = 3; // 4. Kutu
     }
 
     printf("%d. Bolum Yuklendi!\n", levelNum + 1);
@@ -149,10 +153,9 @@ void movePlayer(int dRow, int dCol) {
         }
     }
 
-    // Mevcut bölüm bitti mi?
     if (checkWin()) {
-        currentLevel++; // Sonraki bölüme geç
-        loadLevel(currentLevel); // Yeni bölümü yükle
+        currentLevel++;
+        loadLevel(currentLevel);
     }
 }
 
@@ -172,7 +175,7 @@ int main(int argc, char* args[]) {
     );
 
     if (window == NULL) {
-        printf("Pencere olusturulamadi! Hata: %s\n", SDL_GetError());
+        printf("Pencere olusturulamadi! Hata: %s\n", SCREEN_WIDTH);
         SDL_Quit();
         return 1;
     }
@@ -208,13 +211,13 @@ int main(int argc, char* args[]) {
                     case SDLK_DOWN:  case SDLK_s: movePlayer(1, 0);  break;
                     case SDLK_LEFT:  case SDLK_a: movePlayer(0, -1); break;
                     case SDLK_RIGHT: case SDLK_d: movePlayer(0, 1);  break;
-                    case SDLK_r: loadLevel(currentLevel); break; // R'ye basınca mevcut bölümü sıfırla
+                    case SDLK_r: loadLevel(currentLevel); break;
                 }
             }
         }
 
         if (hasWon) {
-            SDL_SetRenderDrawColor(renderer, 20, 100, 20, 255); // Tüm oyun bitince yeşil ekran
+            SDL_SetRenderDrawColor(renderer, 20, 100, 20, 255);
         } else {
             SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         }
