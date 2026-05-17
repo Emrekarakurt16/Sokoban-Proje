@@ -6,46 +6,65 @@
 #define TILE_SIZE 40
 #define MAP_ROWS 10
 #define MAP_COLS 10
+#define TOTAL_LEVELS 3 // Toplam bölüm sayısı
 
-// Orijinal harita şablonu
-int initialMap[MAP_ROWS][MAP_COLS] = {
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 4, 0, 1},
-    {1, 1, 1, 0, 0, 0, 0, 1, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 4, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+// Orijinal Bölüm Şablonları Havuzu (3 Boyutlu Dizi)
+int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
+    // --- BÖLÜM 1 (Dünkü Tanıdık Harita) ---
+    {
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 4, 0, 1},
+        {1, 1, 1, 0, 0, 0, 0, 1, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 4, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+    },
+    // --- BÖLÜM 2 (Bir tık daha dar ve dolambaçlı) ---
+    {
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        {1, 0, 0, 0, 1, 0, 0, 0, 4, 1},
+        {1, 0, 0, 0, 1, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 1, 1, 1},
+        {1, 1, 1, 0, 0, 0, 0, 0, 0, 1},
+        {1, 4, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 1, 1, 1, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+    },
+    // --- BÖLÜM 3 (Final Bölümü - 3 Kutulu ve daha büyük koridorlar) ---
+    {
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        {1, 0, 4, 0, 0, 0, 0, 4, 0, 1},
+        {1, 0, 0, 0, 1, 1, 0, 0, 0, 1},
+        {1, 0, 0, 0, 1, 1, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 1, 1, 0, 0, 1, 1, 0, 1},
+        {1, 0, 1, 1, 0, 0, 1, 1, 0, 1},
+        {1, 0, 0, 0, 0, 4, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+    }
 };
 
-// Anlık oyun haritası
-int map[MAP_ROWS][MAP_COLS] = {
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 2, 0, 0, 0, 3, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 4, 0, 1},
-    {1, 1, 1, 0, 0, 0, 0, 1, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 0, 4, 0, 0, 0, 3, 0, 0, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-};
+// Aktif olarak oynanan harita ve hedef şablonu
+int map[MAP_ROWS][MAP_COLS];
+int initialMap[MAP_ROWS][MAP_COLS];
 
-int playerRow = 2;
-int playerCol = 2;
-int hasWon = 0;
+int currentLevel = 0; // 0: 1.Bölüm, 1: 2.Bölüm, 2: 3.Bölüm
+int playerRow;
+int playerCol;
+int hasWon = 0; // Tüm oyunun bitip bitmediğini kontrol eder
 
-// Resim Dokuları için değişkenler
 SDL_Texture* playerTex = NULL;
 SDL_Texture* boxTex = NULL;
 SDL_Texture* wallTex = NULL;
 SDL_Texture* targetTex = NULL;
 
-// BMP resimlerini yükleyen yardımcı fonksiyon
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Surface* loadedSurface = SDL_LoadBMP(path);
     if (loadedSurface == NULL) {
@@ -55,6 +74,43 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
     SDL_FreeSurface(loadedSurface);
     return texture;
+}
+
+// Belirtilen bölümü hafızaya yükleyen fonksiyon
+void loadLevel(int levelNum) {
+    if (levelNum >= TOTAL_LEVELS) {
+        hasWon = 1; // Tüm bölümler bittiyse oyunu bitir
+        printf("TEBRIKLER! Tum oyunu bitirdiniz!\n");
+        return;
+    }
+
+    // Haritayı havuzdan kopyala
+    for (int r = 0; r < MAP_ROWS; r++) {
+        for (int c = 0; c < MAP_COLS; c++) {
+            initialMap[r][c] = initialLevels[levelNum][r][c];
+            map[r][c] = initialLevels[levelNum][r][c];
+        }
+    }
+
+    // Her bölümün başlangıç elemanlarını (Oyuncu ve Kutuları) elle yerleştiriyoruz
+    if (levelNum == 0) {
+        map[2][2] = 2; playerRow = 2; playerCol = 2; // Oyuncu
+        map[2][6] = 3; // 1. Kutu
+        map[7][6] = 3; // 2. Kutu
+    }
+    else if (levelNum == 1) {
+        map[1][2] = 2; playerRow = 1; playerCol = 2; // Oyuncu
+        map[2][3] = 3; // 1. Kutu
+        map[5][5] = 3; // 2. Kutu
+    }
+    else if (levelNum == 2) {
+        map[4][4] = 2; playerRow = 4; playerCol = 4; // Oyuncu
+        map[2][2] = 3; // 1. Kutu
+        map[2][7] = 3; // 2. Kutu
+        map[7][3] = 3; // 3. Kutu (Bu bölümde 3 hedef ve 3 kutu var!)
+    }
+
+    printf("%d. Bolum Yuklendi!\n", levelNum + 1);
 }
 
 int checkWin() {
@@ -93,25 +149,11 @@ void movePlayer(int dRow, int dCol) {
         }
     }
 
+    // Mevcut bölüm bitti mi?
     if (checkWin()) {
-        hasWon = 1;
-        printf("TEBRIKLER! Bolumu basariyla tamamladiniz!\n");
+        currentLevel++; // Sonraki bölüme geç
+        loadLevel(currentLevel); // Yeni bölümü yükle
     }
-}
-
-void resetLevel() {
-    for (int r = 0; r < MAP_ROWS; r++) {
-        for (int c = 0; c < MAP_COLS; c++) {
-            map[r][c] = initialMap[r][c];
-        }
-    }
-    map[2][2] = 2;
-    map[2][6] = 3;
-    map[7][6] = 3;
-    playerRow = 2;
-    playerCol = 2;
-    hasWon = 0;
-    printf("Bolum sifirlandi!\n");
 }
 
 int main(int argc, char* args[]) {
@@ -143,11 +185,14 @@ int main(int argc, char* args[]) {
         return 1;
     }
 
-    // --- RESIMLERI TAM DOSYA YOLUYLA YÜKLE ---
+    // Resimleri tam dosya yoluyla yükle
     playerTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\player.bmp", renderer);
     boxTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\box.bmp", renderer);
     wallTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\wall.bmp", renderer);
     targetTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\target.bmp", renderer);
+
+    // İlk bölümü başlat
+    loadLevel(currentLevel);
 
     int isRunning = 1;
     SDL_Event event;
@@ -163,13 +208,13 @@ int main(int argc, char* args[]) {
                     case SDLK_DOWN:  case SDLK_s: movePlayer(1, 0);  break;
                     case SDLK_LEFT:  case SDLK_a: movePlayer(0, -1); break;
                     case SDLK_RIGHT: case SDLK_d: movePlayer(0, 1);  break;
-                    case SDLK_r: resetLevel(); break;
+                    case SDLK_r: loadLevel(currentLevel); break; // R'ye basınca mevcut bölümü sıfırla
                 }
             }
         }
 
         if (hasWon) {
-            SDL_SetRenderDrawColor(renderer, 20, 100, 20, 255);
+            SDL_SetRenderDrawColor(renderer, 20, 100, 20, 255); // Tüm oyun bitince yeşil ekran
         } else {
             SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
         }
@@ -180,12 +225,10 @@ int main(int argc, char* args[]) {
             for (int c = 0; c < MAP_COLS; c++) {
                 SDL_Rect tile = { c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE };
 
-                // 1. Hedef Çizimi (Arka Plan)
                 if (initialMap[r][c] == 4 && targetTex != NULL) {
                     SDL_RenderCopy(renderer, targetTex, NULL, &tile);
                 }
 
-                // 2. Nesne Çizimi (Ön Plan)
                 if (map[r][c] == 1 && wallTex != NULL) {
                     SDL_RenderCopy(renderer, wallTex, NULL, &tile);
                 }
@@ -194,7 +237,7 @@ int main(int argc, char* args[]) {
                 }
                 else if (map[r][c] == 3 && boxTex != NULL) {
                     if (initialMap[r][c] == 4) {
-                        SDL_SetTextureColorMod(boxTex, 150, 255, 150); // Hedefteki kutuyu yeşillendir
+                        SDL_SetTextureColorMod(boxTex, 150, 255, 150);
                     } else {
                         SDL_SetTextureColorMod(boxTex, 255, 255, 255);
                     }
@@ -206,7 +249,6 @@ int main(int argc, char* args[]) {
         SDL_RenderPresent(renderer);
     }
 
-    // Temizlik
     SDL_DestroyTexture(playerTex);
     SDL_DestroyTexture(boxTex);
     SDL_DestroyTexture(wallTex);
