@@ -1,13 +1,13 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 600
-#define TILE_SIZE 40
+#define SCREEN_WIDTH 600   // Kare ekran için genişliği 600 yaptık
+#define SCREEN_HEIGHT 600  // Yükseklik 600 kaldı
+#define TILE_SIZE 60       // Kare boyutunu 40'tan 60'a çıkardık (10x60 = 600 piksel)
 #define MAP_ROWS 10
 #define MAP_COLS 10
 #define TOTAL_LEVELS 3
-#define MAX_UNDO 50 // Maksimum geri alınabilecek hamle sayısı
+#define MAX_UNDO 50
 
 // Orijinal Bölüm Şablonları Havuzu
 int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
@@ -47,7 +47,7 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 1, 0, 1, 1, 1, 1, 0, 1, 1},
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
         {1, 0, 0, 0, 0, 1, 0, 0, 0, 1},
-        {1, 4, 1, 0, 0, 0, 0, 0, 4, 1},
+        {1, 4, 1, 0, 0, 0, 1, 0, 4, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     }
 };
@@ -68,9 +68,8 @@ typedef struct {
 } UndoStep;
 
 UndoStep undoStack[MAX_UNDO];
-int undoTop = -1; // Stack'in en üstünü gösteren işaretçi (Boşken -1)
+int undoTop = -1;
 
-// Hamleyi Stack'e kaydeden fonksiyon (Push)
 void saveState() {
     if (undoTop < MAX_UNDO - 1) {
         undoTop++;
@@ -81,12 +80,9 @@ void saveState() {
         }
         undoStack[undoTop].pRow = playerRow;
         undoStack[undoTop].pCol = playerCol;
-    } else {
-        // Stack dolduysa en eski hamleyi silip kaydırabiliriz ama pratiklik için 50 hamle sınırı koyduk.
     }
 }
 
-// Son hamleyi geri yükleyen fonksiyon (Pop)
 void undoMove() {
     if (undoTop >= 0) {
         for (int r = 0; r < MAP_ROWS; r++) {
@@ -103,7 +99,6 @@ void undoMove() {
     }
 }
 
-// Stack'i tamamen temizleyen fonksiyon (Bölüm değiştiğinde veya resetlendiğinde çağrılır)
 void clearUndoStack() {
     undoTop = -1;
 }
@@ -131,7 +126,7 @@ void loadLevel(int levelNum) {
         return;
     }
 
-    clearUndoStack(); // Bölüm yüklenirken eski hamle geçmişini temizle
+    clearUndoStack();
 
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
@@ -178,10 +173,10 @@ void movePlayer(int dRow, int dCol) {
 
     int nextRow = playerRow + dRow;
     int nextCol = playerCol + dCol;
-    int moved = 0; // Oyuncunun gerçekten hareket edip etmediğini kontrol eder
+    int moved = 0;
 
     if (map[nextRow][nextCol] == 0 || map[nextRow][nextCol] == 4) {
-        saveState(); // Hareket gerçekleşmeden ÖNCE mevcut durumu kaydet
+        saveState();
         map[playerRow][playerCol] = (initialMap[playerRow][playerCol] == 4) ? 4 : 0;
         map[nextRow][nextCol] = 2;
         playerRow = nextRow;
@@ -193,7 +188,7 @@ void movePlayer(int dRow, int dCol) {
         int boxNextCol = nextCol + dCol;
 
         if (map[boxNextRow][boxNextCol] == 0 || map[boxNextRow][boxNextCol] == 4) {
-            saveState(); // Kutu itilmeden ÖNCE mevcut durumu kaydet
+            saveState();
             map[boxNextRow][boxNextCol] = 3;
             map[playerRow][playerCol] = (initialMap[playerRow][playerCol] == 4) ? 4 : 0;
             map[nextRow][nextCol] = 2;
@@ -225,7 +220,7 @@ int main(int argc, char* args[]) {
     );
 
     if (window == NULL) {
-        printf("Pencere olusturulamadi!\n");
+        printf("Pencere olusturulamadi! Hata: %s\n", SDL_GetError());
         SDL_Quit();
         return 1;
     }
@@ -260,7 +255,7 @@ int main(int argc, char* args[]) {
                     case SDLK_LEFT:  case SDLK_a: movePlayer(0, -1); break;
                     case SDLK_RIGHT: case SDLK_d: movePlayer(0, 1);  break;
                     case SDLK_r: loadLevel(currentLevel); break;
-                    case SDLK_z: undoMove(); break; // Z tuşuna basınca hamleyi geri al
+                    case SDLK_z: undoMove(); break;
                 }
             }
         }
@@ -298,6 +293,7 @@ int main(int argc, char* args[]) {
             }
         }
 
+        // Oyun bitince tüm ekran yeşil olur, bitmediyse normal sahneyi basar
         SDL_RenderPresent(renderer);
     }
 
