@@ -6,9 +6,10 @@
 #define TILE_SIZE 40
 #define MAP_ROWS 10
 #define MAP_COLS 10
-#define TOTAL_LEVELS 3 // Toplam bölüm sayısı
+#define TOTAL_LEVELS 3
+#define MAX_UNDO 50 // Maksimum geri alınabilecek hamle sayısı
 
-// Orijinal Bölüm Şablonları Havuzu (3 Boyutlu Dizi)
+// Orijinal Bölüm Şablonları Havuzu
 int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
     // --- BÖLÜM 1 ---
     {
@@ -36,23 +37,21 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     },
-    // --- BÖLÜM 3 (Yeni Zorlu Final Bölümü - 4 Kutulu) ---
-    // --- BÖLÜM 3 (Zor ama %100 Çözülebilir Final Haritası) ---
+    // --- BÖLÜM 3 (Senin kusursuzlaştırdığın sürüm) ---
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-        {1, 4, 0, 0, 0, 0, 0, 0, 4, 1}, // Üst köşelerde hedefler
-        {1, 0, 1, 0, 0, 0, 1, 0, 0, 1}, // İç duvarlar hafif açıldı
-        {1, 0, 1, 1, 1, 0, 1, 0 , 0, 1},
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // Ortada geniş manevra alanı
-        {1, 1, 0, 1, 1, 1, 1, 0, 0, 1},
+        {1, 4, 0, 0, 0, 0, 0, 0, 4, 1},
+        {1, 0, 1, 0, 0, 0, 1, 0, 0, 1},
+        {1, 0, 1, 0, 1, 0, 1, 0, 0, 1},
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 1, 1, 0, 1, 0, 1},
-        {1, 4, 1, 0, 0, 0, 0, 0, 4, 1}, // Alt köşelerde hedefler
+        {1, 1, 0, 1, 1, 1, 1, 0, 1, 1},
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+        {1, 0, 0, 0, 0, 1, 0, 0, 0, 1},
+        {1, 4, 1, 0, 0, 0, 0, 0, 4, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     }
 };
 
-// Aktif olarak oynanan harita ve hedef şablonu
 int map[MAP_ROWS][MAP_COLS];
 int initialMap[MAP_ROWS][MAP_COLS];
 
@@ -60,6 +59,54 @@ int currentLevel = 0;
 int playerRow;
 int playerCol;
 int hasWon = 0;
+
+// --- UNDO (GERİ ALMA) STACK YAPISI ---
+typedef struct {
+    int mapState[MAP_ROWS][MAP_COLS];
+    int pRow;
+    int pCol;
+} UndoStep;
+
+UndoStep undoStack[MAX_UNDO];
+int undoTop = -1; // Stack'in en üstünü gösteren işaretçi (Boşken -1)
+
+// Hamleyi Stack'e kaydeden fonksiyon (Push)
+void saveState() {
+    if (undoTop < MAX_UNDO - 1) {
+        undoTop++;
+        for (int r = 0; r < MAP_ROWS; r++) {
+            for (int c = 0; c < MAP_COLS; c++) {
+                undoStack[undoTop].mapState[r][c] = map[r][c];
+            }
+        }
+        undoStack[undoTop].pRow = playerRow;
+        undoStack[undoTop].pCol = playerCol;
+    } else {
+        // Stack dolduysa en eski hamleyi silip kaydırabiliriz ama pratiklik için 50 hamle sınırı koyduk.
+    }
+}
+
+// Son hamleyi geri yükleyen fonksiyon (Pop)
+void undoMove() {
+    if (undoTop >= 0) {
+        for (int r = 0; r < MAP_ROWS; r++) {
+            for (int c = 0; c < MAP_COLS; c++) {
+                map[r][c] = undoStack[undoTop].mapState[r][c];
+            }
+        }
+        playerRow = undoStack[undoTop].pRow;
+        playerCol = undoStack[undoTop].pCol;
+        undoTop--;
+        printf("Hamle geri alindi. Kalan Geri Alma Hakki: %d\n", undoTop + 1);
+    } else {
+        printf("Geri alinacak hamle yok!\n");
+    }
+}
+
+// Stack'i tamamen temizleyen fonksiyon (Bölüm değiştiğinde veya resetlendiğinde çağrılır)
+void clearUndoStack() {
+    undoTop = -1;
+}
 
 SDL_Texture* playerTex = NULL;
 SDL_Texture* boxTex = NULL;
@@ -77,15 +124,15 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     return texture;
 }
 
-// Belirtilen bölümü hafızaya yükleyen fonksiyon
 void loadLevel(int levelNum) {
     if (levelNum >= TOTAL_LEVELS) {
-        hasWon = 1; // Tüm bölümler bittiyse oyunu bitir
+        hasWon = 1;
         printf("TEBRIKLER! Tum oyunu bitirdiniz!\n");
         return;
     }
 
-    // Haritayı havuzdan kopyala
+    clearUndoStack(); // Bölüm yüklenirken eski hamle geçmişini temizle
+
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
             initialMap[r][c] = initialLevels[levelNum][r][c];
@@ -93,7 +140,6 @@ void loadLevel(int levelNum) {
         }
     }
 
-    // Her bölümün başlangıç elemanlarını (Oyuncu ve Kutuları) yerleştiriyoruz
     if (levelNum == 0) {
         map[2][2] = 2; playerRow = 2; playerCol = 2;
         map[2][6] = 3;
@@ -105,13 +151,12 @@ void loadLevel(int levelNum) {
         map[5][5] = 3;
     }
     else if (levelNum == 2) {
-        map[4][2] = 2; playerRow = 4; playerCol = 2; // Oyuncu başlangıç yeri
+        map[4][4] = 2; playerRow = 4; playerCol = 4;
 
-        // 4 Adet Kutunun Başlangıç Konumları
-        map[3][3] = 3; // 1. Kutu
-        map[4][6] = 3; // 2. Kutu
-        map[6][4] = 3; // 3. Kutu
-        map[7][7] = 3; // 4. Kutu
+        map[2][3] = 3;
+        map[2][5] = 3;
+        map[6][3] = 3;
+        map[6][5] = 3;
     }
 
     printf("%d. Bolum Yuklendi!\n", levelNum + 1);
@@ -133,27 +178,32 @@ void movePlayer(int dRow, int dCol) {
 
     int nextRow = playerRow + dRow;
     int nextCol = playerCol + dCol;
+    int moved = 0; // Oyuncunun gerçekten hareket edip etmediğini kontrol eder
 
     if (map[nextRow][nextCol] == 0 || map[nextRow][nextCol] == 4) {
+        saveState(); // Hareket gerçekleşmeden ÖNCE mevcut durumu kaydet
         map[playerRow][playerCol] = (initialMap[playerRow][playerCol] == 4) ? 4 : 0;
         map[nextRow][nextCol] = 2;
         playerRow = nextRow;
         playerCol = nextCol;
+        moved = 1;
     }
     else if (map[nextRow][nextCol] == 3) {
         int boxNextRow = nextRow + dRow;
         int boxNextCol = nextCol + dCol;
 
         if (map[boxNextRow][boxNextCol] == 0 || map[boxNextRow][boxNextCol] == 4) {
+            saveState(); // Kutu itilmeden ÖNCE mevcut durumu kaydet
             map[boxNextRow][boxNextCol] = 3;
             map[playerRow][playerCol] = (initialMap[playerRow][playerCol] == 4) ? 4 : 0;
             map[nextRow][nextCol] = 2;
             playerRow = nextRow;
             playerCol = nextCol;
+            moved = 1;
         }
     }
 
-    if (checkWin()) {
+    if (moved && checkWin()) {
         currentLevel++;
         loadLevel(currentLevel);
     }
@@ -175,7 +225,7 @@ int main(int argc, char* args[]) {
     );
 
     if (window == NULL) {
-        printf("Pencere olusturulamadi! Hata: %s\n", SCREEN_WIDTH);
+        printf("Pencere olusturulamadi!\n");
         SDL_Quit();
         return 1;
     }
@@ -188,13 +238,11 @@ int main(int argc, char* args[]) {
         return 1;
     }
 
-    // Resimleri tam dosya yoluyla yükle
     playerTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\player.bmp", renderer);
     boxTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\box.bmp", renderer);
     wallTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\wall.bmp", renderer);
     targetTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\target.bmp", renderer);
 
-    // İlk bölümü başlat
     loadLevel(currentLevel);
 
     int isRunning = 1;
@@ -212,6 +260,7 @@ int main(int argc, char* args[]) {
                     case SDLK_LEFT:  case SDLK_a: movePlayer(0, -1); break;
                     case SDLK_RIGHT: case SDLK_d: movePlayer(0, 1);  break;
                     case SDLK_r: loadLevel(currentLevel); break;
+                    case SDLK_z: undoMove(); break; // Z tuşuna basınca hamleyi geri al
                 }
             }
         }
