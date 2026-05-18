@@ -19,7 +19,7 @@ typedef enum {
 GameState currentState = STATE_MENU;
 int selectedOption = 0; // 0: Basla, 1: Komutlar, 2: Cikis
 
-// --- YENİ DÜZELTTİĞİN HARİTA MATRİSLERİ HAVUZU ---
+// --- EN GÜNCEL HARİTA MATRİSLERİN (DOKUNULMADI) ---
 int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
     // --- BÖLÜM 1 ---
     {
@@ -34,12 +34,12 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     },
-    // --- BÖLÜM 2 (Senin son düzelttiğin hali) ---
+    // --- BÖLÜM 2 ---
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 0, 0, 0, 1, 0, 0, 0, 4, 1},
         {1, 0, 0, 0, 1, 0, 0, 0, 0, 1},
-        {1, 0, 0, 0, 0, 0, 1, 1, 1, 1},
+        {1, 0, 0, 0, 0, 0, 0, 1, 1, 1},
         {1, 1, 1, 0, 0, 0, 0, 0, 0, 1},
         {1, 4, 0, 0, 0, 0, 0, 0, 0, 1},
         {1, 1, 1, 1, 0, 0, 0, 0, 0, 1},
@@ -47,7 +47,7 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     },
-    // --- BÖLÜM 3 (Senin son kusursuzlaştırdığın sürüm) ---
+    // --- BÖLÜM 3 ---
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 4, 0, 0, 0, 0, 0, 0, 4, 1},
@@ -57,7 +57,7 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 1, 0, 1, 1, 1, 1, 0, 1, 1},
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
         {1, 0, 0, 0, 0, 1, 0, 0, 0, 1},
-        {1, 4, 1, 0, 0, 1, 0, 4, 1, 1},
+        {1, 4, 1, 0, 0, 1, 0, 1, 4, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     }
 };
@@ -68,7 +68,7 @@ int currentLevel = 0;
 int playerRow, playerCol;
 int hasWon = 0;
 
-// --- UNDO STACK YAPISI ---
+// --- UNDO STACK ---
 typedef struct {
     int mapState[MAP_ROWS][MAP_COLS];
     int pRow, pCol;
@@ -99,13 +99,7 @@ void undoMove() {
     }
 }
 
-// --- SDL TEXTURE TANIMLAMALARI ---
-SDL_Texture *playerTex = NULL;
-SDL_Texture *boxTex = NULL;
-SDL_Texture *wallTex = NULL;
-SDL_Texture *targetTex = NULL;
-SDL_Texture *menuTex = NULL;
-SDL_Texture *controlsTex = NULL;
+SDL_Texture *playerTex, *boxTex, *wallTex, *targetTex, *menuTex, *controlsTex;
 
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Surface* loadedSurface = SDL_LoadBMP(path);
@@ -117,33 +111,16 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
 
 void loadLevel(int levelNum) {
     if (levelNum >= TOTAL_LEVELS) { hasWon = 1; return; }
-    undoTop = -1; // Yeni bölüme geçince yığını temizle
-
+    undoTop = -1;
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
             initialMap[r][c] = initialLevels[levelNum][r][c];
             map[r][c] = initialLevels[levelNum][r][c];
         }
     }
-
-    // Karakter ve Kutuların Başlangıç Noktaları (Matris değişikliklerine uygun yerleşimler)
-    if (levelNum == 0) {
-        map[2][2] = 2; playerRow = 2; playerCol = 2;
-        map[2][6] = 3;
-        map[7][6] = 3;
-    }
-    else if (levelNum == 1) {
-        map[1][2] = 2; playerRow = 1; playerCol = 2;
-        map[2][3] = 3;
-        map[5][5] = 3;
-    }
-    else if (levelNum == 2) {
-        map[4][4] = 2; playerRow = 4; playerCol = 4;
-        map[2][3] = 3;
-        map[2][7] = 3;
-        map[6][3] = 3;
-        map[6][7] = 3;
-    }
+    if (levelNum == 0) { map[2][2] = 2; playerRow = 2; playerCol = 2; map[2][6] = 3; map[7][6] = 3; }
+    else if (levelNum == 1) { map[1][2] = 2; playerRow = 1; playerCol = 2; map[2][3] = 3; map[5][5] = 3; }
+    else if (levelNum == 2) { map[4][4] = 2; playerRow = 4; playerCol = 4; map[2][3] = 3; map[2][7] = 3; map[6][3] = 3; map[6][7] = 3; }
 }
 
 int checkWin() {
@@ -157,7 +134,6 @@ void movePlayer(int dRow, int dCol) {
     if (hasWon) return;
     int nextRow = playerRow + dRow, nextCol = playerCol + dCol;
     int moved = 0;
-
     if (map[nextRow][nextCol] == 0 || map[nextRow][nextCol] == 4) {
         saveState();
         map[playerRow][playerCol] = (initialMap[playerRow][playerCol] == 4) ? 4 : 0;
@@ -181,7 +157,6 @@ int main(int argc, char* args[]) {
     SDL_Window* window = SDL_CreateWindow("Sokoban Projesi - Emre", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-    // Dosya Yollarını Tanımlama
     playerTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\player.bmp", renderer);
     boxTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\box.bmp", renderer);
     wallTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\wall.bmp", renderer);
@@ -196,21 +171,18 @@ int main(int argc, char* args[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) isRunning = 0;
             else if (event.type == SDL_KEYDOWN) {
-                // --- MENÜ KONTROLLERİ ---
                 if (currentState == STATE_MENU) {
                     if (event.key.keysym.sym == SDLK_RETURN) {
                         if (selectedOption == 0) currentState = STATE_PLAY;
                         else if (selectedOption == 1) currentState = STATE_CONTROLS;
-                        else isRunning = 0; // Çıkış
+                        else isRunning = 0;
                     }
                     else if (event.key.keysym.sym == SDLK_UP) selectedOption = (selectedOption - 1 + 3) % 3;
                     else if (event.key.keysym.sym == SDLK_DOWN) selectedOption = (selectedOption + 1) % 3;
                 }
-                // --- KOMUTLAR EKRANI KONTROLLERİ ---
                 else if (currentState == STATE_CONTROLS) {
                     if (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_RETURN) currentState = STATE_MENU;
                 }
-                // --- OYUN İÇİ KONTROLLER ---
                 else if (currentState == STATE_PLAY) {
                     switch (event.key.keysym.sym) {
                         case SDLK_UP: case SDLK_w: movePlayer(-1, 0); break;
@@ -227,14 +199,19 @@ int main(int argc, char* args[]) {
 
         SDL_RenderClear(renderer);
 
-        // --- DRAW 1: MENU ---
+        // --- DRAW 1: MENU (Onarılmış ve Hizalanmış Hali) ---
         if (currentState == STATE_MENU) {
             if (menuTex) SDL_RenderCopy(renderer, menuTex, NULL, NULL);
 
-            // Yeşil Seçim İmleci - Çizdiğin okların tam üstüne oturacak şekilde ayarlandı
             SDL_SetRenderDrawColor(renderer, 34, 197, 94, 255);
-            SDL_Rect cursor = { 135, 142 + (selectedOption * 123), 15, 15 };
-            SDL_RenderFillRect(renderer, &cursor);
+
+            int pixelY = 158;
+            if (selectedOption == 0)      pixelY = 158;
+            else if (selectedOption == 1) pixelY = 276;
+            else if (selectedOption == 2) pixelY = 394;
+
+            SDL_Rect fillRect = { 115, pixelY, 50, 24 };
+            SDL_RenderFillRect(renderer, &fillRect);
         }
         // --- DRAW 2: CONTROLS ---
         else if (currentState == STATE_CONTROLS) {
@@ -263,7 +240,6 @@ int main(int argc, char* args[]) {
         SDL_RenderPresent(renderer);
     }
 
-    // Temizlik
     SDL_DestroyTexture(playerTex); SDL_DestroyTexture(boxTex);
     SDL_DestroyTexture(wallTex); SDL_DestroyTexture(targetTex);
     SDL_DestroyTexture(menuTex); SDL_DestroyTexture(controlsTex);
