@@ -13,7 +13,8 @@
 typedef enum {
     STATE_MENU,
     STATE_CONTROLS,
-    STATE_PLAY
+    STATE_PLAY,
+    STATE_WIN       // --- YENİ: Zafer Ekranı Durumu ---
 } GameState;
 
 GameState currentState = STATE_MENU;
@@ -66,7 +67,6 @@ int map[MAP_ROWS][MAP_COLS];
 int initialMap[MAP_ROWS][MAP_COLS];
 int currentLevel = 0;
 int playerRow, playerCol;
-int hasWon = 0;
 
 // --- UNDO STACK ---
 typedef struct {
@@ -99,7 +99,7 @@ void undoMove() {
     }
 }
 
-SDL_Texture *playerTex, *boxTex, *wallTex, *targetTex, *menuTex, *controlsTex;
+SDL_Texture *playerTex, *boxTex, *wallTex, *targetTex, *menuTex, *controlsTex, *winTex;
 
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Surface* loadedSurface = SDL_LoadBMP(path);
@@ -110,7 +110,11 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
 }
 
 void loadLevel(int levelNum) {
-    if (levelNum >= TOTAL_LEVELS) { hasWon = 1; return; }
+    // Eğer tüm bölümler bittiyse artık oyunu dondurmuyoruz, direkt Zafer Ekranı durumuna geçiyoruz
+    if (levelNum >= TOTAL_LEVELS) {
+        currentState = STATE_WIN;
+        return;
+    }
     undoTop = -1;
     for (int r = 0; r < MAP_ROWS; r++) {
         for (int c = 0; c < MAP_COLS; c++) {
@@ -131,7 +135,7 @@ int checkWin() {
 }
 
 void movePlayer(int dRow, int dCol) {
-    if (hasWon) return;
+    if (currentState == STATE_WIN) return;
     int nextRow = playerRow + dRow, nextCol = playerCol + dCol;
     int moved = 0;
     if (map[nextRow][nextCol] == 0 || map[nextRow][nextCol] == 4) {
@@ -163,6 +167,7 @@ int main(int argc, char* args[]) {
     targetTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\target.bmp", renderer);
     menuTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\menu.bmp", renderer);
     controlsTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\controls.bmp", renderer);
+    winTex = loadTexture("C:\\Users\\Emrek\\OneDrive\\Desktop\\Sokoban Proje\\win.bmp", renderer); // --- YENİ: Zafer görselini yükleme ---
 
     loadLevel(currentLevel);
     int isRunning = 1; SDL_Event event;
@@ -171,13 +176,12 @@ int main(int argc, char* args[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) isRunning = 0;
             else if (event.type == SDL_KEYDOWN) {
-                // --- MENÜ KONTROLLERİ (REFRESH ÖZELLİKLİ) ---
+                // --- MENÜ KONTROLLERİ ---
                 if (currentState == STATE_MENU) {
                     if (event.key.keysym.sym == SDLK_RETURN) {
                         if (selectedOption == 0) {
-                            currentLevel = 0;    // Oyunu her açılışta sıfırla
-                            hasWon = 0;          // Galibiyet bayrağını temizle
-                            loadLevel(0);        // 1. seviyeyi sıfırdan yükle
+                            currentLevel = 0;
+                            loadLevel(0);
                             currentState = STATE_PLAY;
                         }
                         else if (selectedOption == 1) currentState = STATE_CONTROLS;
@@ -197,19 +201,21 @@ int main(int argc, char* args[]) {
                         case SDLK_DOWN: case SDLK_s: movePlayer(1, 0); break;
                         case SDLK_LEFT: case SDLK_a: movePlayer(0, -1); break;
                         case SDLK_RIGHT: case SDLK_d: movePlayer(0, 1); break;
-                        case SDLK_r:
-                            // Oyun bittikten sonra R'ye basıldığında haritayı sıfırlama mekanizması
-                            if (hasWon && currentLevel >= TOTAL_LEVELS) {
-                                currentLevel = 0;
-                                hasWon = 0;
-                                loadLevel(0);
-                            } else {
-                                hasWon = 0;
-                                loadLevel(currentLevel);
-                            }
-                            break;
+                        case SDLK_r: loadLevel(currentLevel); break;
                         case SDLK_z: undoMove(); break;
                         case SDLK_ESCAPE: currentState = STATE_MENU; break;
+                    }
+                }
+                // --- YENİ: ZAFER EKRANI KONTROLLERİ ---
+                else if (currentState == STATE_WIN) {
+                    if (event.key.keysym.sym == SDLK_RETURN) {
+                        currentState = STATE_MENU; // ENTER'a basınca ana menüye döner
+                    } else if (event.key.keysym.sym == SDLK_r) {
+                        currentLevel = 0;
+                        loadLevel(0);
+                        currentState = STATE_PLAY; // R'ye basınca oyunu 1. bölümden sıfırlar
+                    } else if (event.key.keysym.sym == SDLK_ESCAPE) {
+                        isRunning = 0; // ESC'ye basınca direkt oyunu kapatır
                     }
                 }
             }
@@ -220,14 +226,11 @@ int main(int argc, char* args[]) {
         // --- DRAW 1: MENU ---
         if (currentState == STATE_MENU) {
             if (menuTex) SDL_RenderCopy(renderer, menuTex, NULL, NULL);
-
             SDL_SetRenderDrawColor(renderer, 34, 197, 94, 255);
-
             int pixelY = 158;
             if (selectedOption == 0)      pixelY = 158;
             else if (selectedOption == 1) pixelY = 276;
             else if (selectedOption == 2) pixelY = 394;
-
             SDL_Rect fillRect = { 115, pixelY, 50, 24 };
             SDL_RenderFillRect(renderer, &fillRect);
         }
@@ -237,8 +240,7 @@ int main(int argc, char* args[]) {
         }
         // --- DRAW 3: PLAY ---
         else if (currentState == STATE_PLAY) {
-            if (hasWon) SDL_SetRenderDrawColor(renderer, 20, 100, 20, 255);
-            else SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+            SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
             SDL_RenderClear(renderer);
 
             for (int r = 0; r < MAP_ROWS; r++) {
@@ -255,12 +257,24 @@ int main(int argc, char* args[]) {
                 }
             }
         }
+        // --- YENİ: DRAW 4: WIN SCREEN ---
+        else if (currentState == STATE_WIN) {
+            if (winTex) {
+                SDL_RenderCopy(renderer, winTex, NULL, NULL);
+            } else {
+                // Eğer win.bmp yüklenemezse acil durum arka planı (Siyah)
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderClear(renderer);
+            }
+        }
+
         SDL_RenderPresent(renderer);
     }
 
     SDL_DestroyTexture(playerTex); SDL_DestroyTexture(boxTex);
     SDL_DestroyTexture(wallTex); SDL_DestroyTexture(targetTex);
     SDL_DestroyTexture(menuTex); SDL_DestroyTexture(controlsTex);
+    SDL_DestroyTexture(winTex); // --- YENİ: Hafızayı temizleme ---
     SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
