@@ -19,7 +19,7 @@ typedef enum {
 GameState currentState = STATE_MENU;
 int selectedOption = 0; // 0: Basla, 1: Komutlar, 2: Cikis
 
-// --- EN GÜNCEL HARİTA MATRİSLERİN (DOKUNULMADI) ---
+// --- HARİTA MATRİSLERİ HAVUZU ---
 int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
     // --- BÖLÜM 1 ---
     {
@@ -171,25 +171,43 @@ int main(int argc, char* args[]) {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT) isRunning = 0;
             else if (event.type == SDL_KEYDOWN) {
+                // --- MENÜ KONTROLLERİ (REFRESH ÖZELLİKLİ) ---
                 if (currentState == STATE_MENU) {
                     if (event.key.keysym.sym == SDLK_RETURN) {
-                        if (selectedOption == 0) currentState = STATE_PLAY;
+                        if (selectedOption == 0) {
+                            currentLevel = 0;    // Oyunu her açılışta sıfırla
+                            hasWon = 0;          // Galibiyet bayrağını temizle
+                            loadLevel(0);        // 1. seviyeyi sıfırdan yükle
+                            currentState = STATE_PLAY;
+                        }
                         else if (selectedOption == 1) currentState = STATE_CONTROLS;
                         else isRunning = 0;
                     }
                     else if (event.key.keysym.sym == SDLK_UP) selectedOption = (selectedOption - 1 + 3) % 3;
                     else if (event.key.keysym.sym == SDLK_DOWN) selectedOption = (selectedOption + 1) % 3;
                 }
+                // --- KOMUTLAR EKRANI KONTROLLERİ ---
                 else if (currentState == STATE_CONTROLS) {
                     if (event.key.keysym.sym == SDLK_ESCAPE || event.key.keysym.sym == SDLK_RETURN) currentState = STATE_MENU;
                 }
+                // --- OYUN İÇİ KONTROLLER ---
                 else if (currentState == STATE_PLAY) {
                     switch (event.key.keysym.sym) {
                         case SDLK_UP: case SDLK_w: movePlayer(-1, 0); break;
                         case SDLK_DOWN: case SDLK_s: movePlayer(1, 0); break;
                         case SDLK_LEFT: case SDLK_a: movePlayer(0, -1); break;
                         case SDLK_RIGHT: case SDLK_d: movePlayer(0, 1); break;
-                        case SDLK_r: loadLevel(currentLevel); break;
+                        case SDLK_r:
+                            // Oyun bittikten sonra R'ye basıldığında haritayı sıfırlama mekanizması
+                            if (hasWon && currentLevel >= TOTAL_LEVELS) {
+                                currentLevel = 0;
+                                hasWon = 0;
+                                loadLevel(0);
+                            } else {
+                                hasWon = 0;
+                                loadLevel(currentLevel);
+                            }
+                            break;
                         case SDLK_z: undoMove(); break;
                         case SDLK_ESCAPE: currentState = STATE_MENU; break;
                     }
@@ -199,7 +217,7 @@ int main(int argc, char* args[]) {
 
         SDL_RenderClear(renderer);
 
-        // --- DRAW 1: MENU (Onarılmış ve Hizalanmış Hali) ---
+        // --- DRAW 1: MENU ---
         if (currentState == STATE_MENU) {
             if (menuTex) SDL_RenderCopy(renderer, menuTex, NULL, NULL);
 
