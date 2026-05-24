@@ -68,7 +68,7 @@ int initialMap[MAP_ROWS][MAP_COLS];
 int currentLevel = 0;
 int playerRow, playerCol;
 
-// --- UNDO STACK ---
+
 typedef struct {
     int mapState[MAP_ROWS][MAP_COLS];
     int pRow, pCol;
@@ -138,13 +138,23 @@ void movePlayer(int dRow, int dCol) {
     if (currentState == STATE_WIN) return;
     int nextRow = playerRow + dRow, nextCol = playerCol + dCol;
     int moved = 0;
+
+    // 1. Durum: Önümüz boşsa veya hedef noktasıysa normal yürüyoruz
     if (map[nextRow][nextCol] == 0 || map[nextRow][nextCol] == 4) {
         saveState();
         map[playerRow][playerCol] = (initialMap[playerRow][playerCol] == 4) ? 4 : 0;
         map[nextRow][nextCol] = 2;
         playerRow = nextRow; playerCol = nextCol; moved = 1;
-    } else if (map[nextRow][nextCol] == 3) {
+    }
+    // 2. Durum: Önümüzde bir kutu varsa (map == 3)
+    else if (map[nextRow][nextCol] == 3) {
+        // KRİTİK KONTROL: Eğer bu kutu zaten bir hedefin üzerindeyse hareket ettireme! (Kilitlendi)
+        if (initialMap[nextRow][nextCol] == 4) {
+            return; // Fonksiyondan direkt çık, kutu kilitli olduğu için itilemez!
+        }
+
         int boxNextR = nextRow + dRow, boxNextC = nextCol + dCol;
+        // Eğer kutunun arkası boşsa veya hedefse kutuyu itiyoruz
         if (map[boxNextR][boxNextC] == 0 || map[boxNextR][boxNextC] == 4) {
             saveState();
             map[boxNextR][boxNextC] = 3;
