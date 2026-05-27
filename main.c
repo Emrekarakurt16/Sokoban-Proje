@@ -104,9 +104,10 @@ SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Surface* loadedSurface = SDL_LoadBMP(path);
     if (!loadedSurface) return NULL;
 
-    // Eğer yüklenen resim oyuncu (player) resmiyse, tam siyah (0,0,0) rengini şeffaf yap
-    // Not: Eğer diğer resimlerin arkasını da şeffaf yapmak istersen bu kod hepsine uygulanır.
-    if (strstr(path, "player.bmp") != NULL) {
+    // --- GENİŞLETİLMİŞ ŞEFFAFLIK SİHRİ ---
+    // Eğer yüklenen resim oyuncu (player) VEYA hedef (target) resmi ise,
+    // resimdeki tam siyah (0, 0, 0) alanları tamamen görünmez (şeffaf) yap.
+    if (strstr(path, "player.bmp") != NULL || strstr(path, "target.bmp") != NULL) {
         Uint32 colorKey = SDL_MapRGB(loadedSurface->format, 0, 0, 0);
         SDL_SetColorKey(loadedSurface, SDL_TRUE, colorKey);
     }
