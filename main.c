@@ -1,6 +1,6 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
-
+#include <string.h>
 #define SCREEN_WIDTH 600
 #define SCREEN_HEIGHT 600
 #define TILE_SIZE 60
@@ -14,15 +14,14 @@ typedef enum {
     STATE_MENU,
     STATE_CONTROLS,
     STATE_PLAY,
-    STATE_WIN       // --- YENİ: Zafer Ekranı Durumu ---
+    STATE_WIN
 } GameState;
 
 GameState currentState = STATE_MENU;
 int selectedOption = 0; // 0: Basla, 1: Komutlar, 2: Cikis
 
-// --- HARİTA MATRİSLERİ HAVUZU ---
 int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
-    // --- BÖLÜM 1 ---
+        // Harita 1
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -35,7 +34,7 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     },
-    // --- BÖLÜM 2 ---
+        // Harita 2
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 0, 0, 0, 1, 0, 0, 0, 4, 1},
@@ -48,7 +47,7 @@ int initialLevels[TOTAL_LEVELS][MAP_ROWS][MAP_COLS] = {
         {1, 0, 0, 0, 0, 1, 1, 0, 0, 1},
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
     },
-    // --- BÖLÜM 3 ---
+        // Harita 3
     {
         {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
         {1, 4, 0, 0, 0, 0, 0, 0, 4, 1},
@@ -104,11 +103,18 @@ SDL_Texture *playerTex, *boxTex, *wallTex, *targetTex, *menuTex, *controlsTex, *
 SDL_Texture* loadTexture(const char* path, SDL_Renderer* renderer) {
     SDL_Surface* loadedSurface = SDL_LoadBMP(path);
     if (!loadedSurface) return NULL;
+
+    // Eğer yüklenen resim oyuncu (player) resmiyse, tam siyah (0,0,0) rengini şeffaf yap
+    // Not: Eğer diğer resimlerin arkasını da şeffaf yapmak istersen bu kod hepsine uygulanır.
+    if (strstr(path, "player.bmp") != NULL) {
+        Uint32 colorKey = SDL_MapRGB(loadedSurface->format, 0, 0, 0);
+        SDL_SetColorKey(loadedSurface, SDL_TRUE, colorKey);
+    }
+
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, loadedSurface);
     SDL_FreeSurface(loadedSurface);
     return texture;
 }
-
 void loadLevel(int levelNum) {
     // Eğer tüm bölümler bittiyse artık oyunu dondurmuyoruz, direkt Zafer Ekranı durumuna geçiyoruz
     if (levelNum >= TOTAL_LEVELS) {
