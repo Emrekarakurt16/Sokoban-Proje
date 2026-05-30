@@ -240,16 +240,23 @@ int main(int argc, char* args[]) {
 
         SDL_RenderClear(renderer);
 
-        // --- DRAW 1: MENU ---
+  // --- DRAW 1: MENU ---
         if (currentState == STATE_MENU) {
             if (menuTex) SDL_RenderCopy(renderer, menuTex, NULL, NULL);
-            SDL_SetRenderDrawColor(renderer, 34, 197, 94, 255);
+
+            // Eski yeşil kare kodlarını uçurduk!
+            // Yerine hedefler için kullandığımız o şık kırmızı neon çarpıyı imleç yapıyoruz:
             int pixelY = 158;
-            if (selectedOption == 0)      pixelY = 158;
-            else if (selectedOption == 1) pixelY = 276;
+            if (selectedOption == 0)      pixelY = 138;
+            else if (selectedOption == 1) pixelY = 256;
             else if (selectedOption == 2) pixelY = 394;
-            SDL_Rect fillRect = { 115, pixelY, 50, 24 };
-            SDL_RenderFillRect(renderer, &fillRect);
+
+            // İmleci seçeneğin soluna (mesela X: 65 koordinatına) 24x24 boyutunda çizdiriyoruz
+            // Not: Eğer targetTex yerine oyuncunun resmini istersen playerTex de yazabilirsin!
+            if (targetTex) {
+                SDL_Rect cursorRect = { 65, pixelY, 24, 24 };
+                SDL_RenderCopy(renderer, targetTex, NULL, &cursorRect);
+            }
         }
         // --- DRAW 2: CONTROLS ---
         else if (currentState == STATE_CONTROLS) {
