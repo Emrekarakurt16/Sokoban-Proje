@@ -1,0 +1,20 @@
+# Derleyici ve Bayraklar
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99
+LIBS = -lSDL2 -lSDL2_image
+
+# Hedef Çalıştırılabilir Dosya Adı (Windows için .exe uzantılı)
+TARGET = main.exe
+
+# Varsayılan Hedef
+all: $(TARGET)
+
+# Derleme ve Bağlama İşlemi
+$(TARGET): main.c
+	$(CC) $(CFLAGS) -o $(TARGET) main.c $(LIBS)
+
+# Windows Uyumlu Temizlik Komutu
+clean:
+	del /q $(TARGET)
+
+.PHONY: all clean
